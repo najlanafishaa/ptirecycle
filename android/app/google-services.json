@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "987278104822",
+    "project_id": "ptirecycle",
+    "storage_bucket": "ptirecycle.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:987278104822:android:8f3682c2f4970daed134d7",
+        "android_client_info": {
+          "package_name": "com.example.ptirecycle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeGV2jkC_ZdloKbX-PgAaj7jguzP4AXMo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
