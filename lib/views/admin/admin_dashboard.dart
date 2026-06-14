@@ -278,39 +278,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 30),
 
-          // Welcome and operational details
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: Colors.white,
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info, color: Colors.blue[700], size: 24),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Petunjuk Penggunaan Panel CRUD',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Sebagai Administrator, Anda memiliki hak penuh untuk mengelola aset perparkiran Universitas Lampung:\n\n'
-                    '1. **Zona Parkir**: Buat area baru, edit data latitude/longitude GPS untuk keakuratan peta, dan hapus area tidak aktif.\n'
-                    '2. **Slot Parkir**: Atur slot spesifik per zona, ubah peruntukan jenis kendaraan (Mobil/Motor), atau lakukan override status keterisian slot secara manual.\n'
-                    '3. **Petugas Parkir**: Tambahkan profil petugas yang bertanggung jawab mengawasi ketertiban di masing-masing zona.\n'
-                    '4. **Laporan Pengguna**: Pantau aduan pengemudi tentang kendala parkir dan ubah status laporan setelah ditindaklanjuti.',
-                    style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.6),
-                  ),
-                ],
-              ),
-            ),
-          ),
+
         ],
       ),
     );

@@ -52,84 +52,92 @@ class ParkingProvider extends ChangeNotifier {
     // 1. Seed Zones
     _zones.addAll([
       ParkingZone(
-        id: 'rektorat',
-        nama: 'Zona Rektorat Unila',
-        deskripsi: 'Area parkir utama depan Gedung Rektorat Unila',
-        latitude: -5.3582,
-        longitude: 105.2443,
+        id: 'fmipa',
+        nama: 'Parkiran FMIPA',
+        deskripsi: 'Area parkir Fakultas Matematika dan Ilmu Pengetahuan Alam',
+        latitude: -5.366613,
+        longitude: 105.244286,
+        totalSlots: 15,
+      ),
+      ParkingZone(
+        id: 'fkip',
+        nama: 'Parkiran FKIP',
+        deskripsi: 'Area parkir Fakultas Keguruan dan Ilmu Pendidikan',
+        latitude: -5.366752,
+        longitude: 105.245564,
+        totalSlots: 20,
+      ),
+      ParkingZone(
+        id: 'fk',
+        nama: 'Parkiran FK',
+        deskripsi: 'Area parkir Fakultas Kedokteran',
+        latitude: -5.367506,
+        longitude: 105.246625,
         totalSlots: 10,
       ),
       ParkingZone(
-        id: 'gsg',
-        nama: 'Zona GSG Unila',
-        deskripsi: 'Area parkir luas samping Gedung Serba Guna Unila',
-        latitude: -5.3615,
-        longitude: 105.2425,
+        id: 'shuttle',
+        nama: 'Parkiran Shuttle Unila',
+        deskripsi: 'Area parkir dekat Shuttle Bus Universitas Lampung',
+        latitude: -5.368093,
+        longitude: 105.241798,
+        totalSlots: 10,
+      ),
+      ParkingZone(
+        id: 'feb',
+        nama: 'Parkiran FEB',
+        deskripsi: 'Area parkir Fakultas Ekonomi dan Bisnis',
+        latitude: -5.362748,
+        longitude: 105.243821,
+        totalSlots: 15,
+      ),
+      ParkingZone(
+        id: 'beringin',
+        nama: 'Parkiran Beringin',
+        deskripsi: 'Area parkir sekitar taman Beringin Unila',
+        latitude: -5.365434,
+        longitude: 105.243592,
+        totalSlots: 25,
+      ),
+      ParkingZone(
+        id: 'fisip',
+        nama: 'Parkiran FISIP',
+        deskripsi: 'Area parkir Fakultas Ilmu Sosial dan Ilmu Politik',
+        latitude: -5.363123,
+        longitude: 105.244257,
+        totalSlots: 15,
+      ),
+      ParkingZone(
+        id: 'fh',
+        nama: 'Parkiran FH',
+        deskripsi: 'Area parkir Fakultas Hukum',
+        latitude: -5.363653,
+        longitude: 105.244410,
         totalSlots: 15,
       ),
       ParkingZone(
         id: 'teknik',
-        nama: 'Zona Fakultas Teknik',
-        deskripsi: 'Area parkir di dalam kompleks Fakultas Teknik Unila',
-        latitude: -5.3601,
-        longitude: 105.2462,
-        totalSlots: 12,
+        nama: 'Parkiran Teknik',
+        deskripsi: 'Area parkir Fakultas Teknik',
+        latitude: -5.362447,
+        longitude: 105.241834,
+        totalSlots: 20,
       ),
       ParkingZone(
-        id: 'feb',
-        nama: 'Zona FEB Unila',
-        deskripsi: 'Area parkir samping Fakultas Ekonomi dan Bisnis',
-        latitude: -5.3592,
-        longitude: 105.2411,
-        totalSlots: 10,
+        id: 'fp',
+        nama: 'Parkiran FP',
+        deskripsi: 'Area parkir Fakultas Pertanian',
+        latitude: -5.364744,
+        longitude: 105.241465,
+        totalSlots: 20,
       ),
       ParkingZone(
-        id: 'fkip',
-        nama: 'Zona FKIP Unila',
-        deskripsi: 'Area parkir Fakultas Keguruan dan Ilmu Pendidikan',
-        latitude: -5.3625,
-        longitude: 105.2450,
-        totalSlots: 15,
-      ),
-      ParkingZone(
-        id: 'fmipa',
-        nama: 'Zona FMIPA Unila',
-        deskripsi: 'Area parkir Fakultas Matematika dan Ilmu Pengetahuan Alam',
-        latitude: -5.3605,
-        longitude: 105.2448,
-        totalSlots: 10,
-      ),
-      ParkingZone(
-        id: 'hukum',
-        nama: 'Zona Fakultas Hukum',
-        deskripsi: 'Area parkir Fakultas Hukum Unila',
-        latitude: -5.3575,
-        longitude: 105.2428,
-        totalSlots: 8,
-      ),
-      ParkingZone(
-        id: 'faperta',
-        nama: 'Zona Faperta Unila',
-        deskripsi: 'Area parkir Fakultas Pertanian Unila',
-        latitude: -5.3598,
+        id: 'perpus',
+        nama: 'Parkiran Perpus',
+        deskripsi: 'Area parkir Perpustakaan Universitas Lampung',
+        latitude: -5.3615,
         longitude: 105.2430,
         totalSlots: 12,
-      ),
-      ParkingZone(
-        id: 'fisip',
-        nama: 'Zona FISIP Unila',
-        deskripsi: 'Area parkir Fakultas Ilmu Sosial dan Ilmu Politik',
-        latitude: -5.3585,
-        longitude: 105.2455,
-        totalSlots: 10,
-      ),
-      ParkingZone(
-        id: 'kedokteran',
-        nama: 'Zona FK Unila',
-        deskripsi: 'Area parkir Fakultas Kedokteran Unila',
-        latitude: -5.3635,
-        longitude: 105.2435,
-        totalSlots: 8,
       ),
     ]);
 
@@ -213,18 +221,29 @@ class ParkingProvider extends ChangeNotifier {
   }
 
   // ==================== REACTIVE STREAMS EMULATOR ====================
-  Stream<List<ParkingZone>> streamZones() => _zonesStreamController.stream;
+  Stream<List<ParkingZone>> streamZones() async* {
+    yield List.from(_zones);
+    yield* _zonesStreamController.stream;
+  }
   
-  Stream<List<ParkingSlot>> streamSlots(String zoneId) {
-    // Return filtered stream that updates whenever slots changes
-    // We will immediately push the current state
+  Stream<List<ParkingSlot>> streamSlots(String zoneId) async* {
     final filtered = _slots.where((s) => s.zoneId == zoneId).toList();
-    Timer(Duration.zero, () => _slotsStreamController.add(filtered));
-    return _slotsStreamController.stream;
+    yield filtered;
+    // We need to filter the broadcast stream as well
+    await for (final slotsList in _slotsStreamController.stream) {
+      yield slotsList.where((s) => s.zoneId == zoneId).toList();
+    }
   }
 
-  Stream<List<ParkingOfficer>> streamOfficers() => _officersStreamController.stream;
-  Stream<List<ParkingReport>> streamReports() => _reportsStreamController.stream;
+  Stream<List<ParkingOfficer>> streamOfficers() async* {
+    yield List.from(_officers);
+    yield* _officersStreamController.stream;
+  }
+
+  Stream<List<ParkingReport>> streamReports() async* {
+    yield List.from(_reports);
+    yield* _reportsStreamController.stream;
+  }
 
   // Mapped Stream user history (using local db instead of Firebase!)
   Stream<List<ParkingHistory>> streamUserHistory(String userId) {

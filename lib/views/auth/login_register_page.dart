@@ -207,22 +207,29 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
 
                         // Admin Checkbox
                         if (_isLogin)
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: _isAdminLogin,
-                                activeColor: primaryColor,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _isAdminLogin = val ?? false;
-                                  });
-                                },
-                              ),
-                              const Text(
-                                'Masuk sebagai Administrator',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                              ),
-                            ],
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isAdminLogin = !_isAdminLogin;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Checkbox(
+                                  value: _isAdminLogin,
+                                  activeColor: primaryColor,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _isAdminLogin = val ?? false;
+                                    });
+                                  },
+                                ),
+                                const Text(
+                                  'Masuk sebagai Administrator',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
                           ),
 
                         const SizedBox(height: 16),

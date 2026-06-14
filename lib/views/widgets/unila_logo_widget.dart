@@ -13,7 +13,7 @@ class UnilaLogoWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.network(
-      'https://upload.wikimedia.org/wikipedia/commons/0/0a/Logo_Universitas_Lampung.png',
+      'https://upload.wikimedia.org/wikipedia/commons/8/87/Logo_UnivLampung.png',
       width: size,
       height: size,
       fit: BoxFit.contain,
