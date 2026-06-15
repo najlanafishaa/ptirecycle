@@ -38,9 +38,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     final List<String> menuTitles = [
       'Dashboard Ringkasan',
-      'CRUD Zona Parkir',
-      'CRUD Slot Parkir',
-      'CRUD Petugas Parkir',
+      'Zona Parkir',
+      'Slot Parkir',
+      'Petugas Parkir',
       'Laporan Pengguna',
     ];
 
@@ -49,7 +49,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ? AppBar(
               title: Text(
                 menuTitles[_selectedMenuIndex],
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
               ),
               backgroundColor: darkColor,
               iconTheme: const IconThemeData(color: Colors.white),
@@ -57,7 +61,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           : null,
       drawer: isMobile
           ? Drawer(
-              child: _buildSidebarContent(authProvider, darkColor, isDrawer: true),
+              child: _buildSidebarContent(
+                authProvider,
+                darkColor,
+                isDrawer: true,
+              ),
             )
           : null,
       body: isMobile
@@ -68,7 +76,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Container(
                   width: 240,
                   color: darkColor,
-                  child: _buildSidebarContent(authProvider, darkColor, isDrawer: false),
+                  child: _buildSidebarContent(
+                    authProvider,
+                    darkColor,
+                    isDrawer: false,
+                  ),
                 ),
 
                 // Main Content Area (Kanan)
@@ -97,7 +109,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                                 Text(
                                   'Halo, ${authProvider.userDetails?['nama'] ?? 'Admin'}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -106,9 +120,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         const Divider(height: 1),
 
                         // Dynamic Body View
-                        Expanded(
-                          child: pages[_selectedMenuIndex],
-                        ),
+                        Expanded(child: pages[_selectedMenuIndex]),
                       ],
                     ),
                   ),
@@ -118,7 +130,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildSidebarContent(AuthProvider authProvider, Color darkColor, {required bool isDrawer}) {
+  Widget _buildSidebarContent(
+    AuthProvider authProvider,
+    Color darkColor, {
+    required bool isDrawer,
+  }) {
     return Container(
       color: darkColor,
       child: Column(
@@ -143,10 +159,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   Text(
                     'Sistem Parkir Terpadu',
-                    style: TextStyle(
-                      color: Colors.blue[100],
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: Colors.blue[100], fontSize: 11),
                   ),
                 ],
               ),
@@ -174,14 +187,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
             leading: const Icon(Icons.logout, color: Colors.white70),
             title: const Text(
               'Keluar Panel',
-              style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             onTap: () async {
               await authProvider.logout();
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginRegisterPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const LoginRegisterPage(),
+                  ),
                   (route) => false,
                 );
               }
@@ -202,10 +220,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
-        leading: Icon(
-          icon,
-          color: isSelected ? Colors.white : Colors.white70,
-        ),
+        leading: Icon(icon, color: isSelected ? Colors.white : Colors.white70),
         title: Text(
           title,
           style: TextStyle(
@@ -237,7 +252,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           const Text(
             'Ikhtisar Sistem Real-Time',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -277,8 +296,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
           const SizedBox(height: 30),
-
-
         ],
       ),
     );
@@ -301,12 +318,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   val,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ),
