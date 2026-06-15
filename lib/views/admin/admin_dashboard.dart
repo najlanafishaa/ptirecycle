@@ -240,23 +240,67 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // Dashboard ringkasan stats
+  // Dashboard ringkasan stats — REALTIME dari Firestore
   Widget _buildDashboardHome(bool isMobile) {
-    final parkingProvider = Provider.of<ParkingProvider>(context);
-    final zonesCount = parkingProvider.zones.length;
+    final parking = Provider.of<ParkingProvider>(context);
+
+    final int totalZones = parking.zones.length;
+    final int totalSlots = parking.slots.length;
+    final int occupiedSlots = parking.slots.where((s) => s.isOccupied).length;
+    final int availableSlots = totalSlots - occupiedSlots;
+    final double occupancyRate = totalSlots > 0 ? (occupiedSlots / totalSlots * 100) : 0;
+
+    final int activeOfficers = parking.officers.where((o) => o.status == 'Aktif').length;
+    final int pendingReports = parking.reports.where((r) => r.status == 'Pending').length;
+    final int totalReports = parking.reports.length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Ikhtisar Sistem Real-Time',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
+          Row(
+            children: [
+              const Text(
+                'Ikhtisar Sistem Real-Time',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Indikator live
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
@@ -270,28 +314,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
             childAspectRatio: isMobile ? 3.0 : 2.2,
             children: [
               _buildStatCard(
-                'TOTAL ZONA',
-                '$zonesCount',
+                'TOTAL ZONA PARKIR',
+                '$totalZones zona',
                 Icons.layers,
                 Colors.blue,
+                onTap: () => setState(() => _selectedMenuIndex = 1),
               ),
               _buildStatCard(
                 'OCCUPANCY RATE',
-                '32%',
+                '${occupancyRate.toStringAsFixed(1)}%',
                 Icons.pie_chart,
                 Colors.orange,
+                subtitle: '$occupiedSlots terisi / $totalSlots slot',
+                onTap: () => setState(() => _selectedMenuIndex = 2),
+              ),
+              _buildStatCard(
+                'SLOT TERSEDIA',
+                '$availableSlots slot',
+                Icons.local_parking,
+                Colors.green,
+                subtitle: '$occupiedSlots slot terisi',
+                onTap: () => setState(() => _selectedMenuIndex = 2),
               ),
               _buildStatCard(
                 'PETUGAS AKTIF',
-                '3 Orang',
+                '$activeOfficers orang',
                 Icons.supervisor_account,
-                Colors.green,
+                Colors.teal,
+                onTap: () => setState(() => _selectedMenuIndex = 3),
               ),
               _buildStatCard(
-                'LAPORAN ADUAN',
-                '1 Pending',
+                'LAPORAN PENDING',
+                '$pendingReports laporan',
                 Icons.warning_amber,
-                Colors.red,
+                pendingReports > 0 ? Colors.red : Colors.grey,
+                subtitle: 'Total $totalReports laporan',
+                onTap: () => setState(() => _selectedMenuIndex = 4),
+              ),
+              _buildStatCard(
+                'TOTAL SLOT PARKIR',
+                '$totalSlots slot',
+                Icons.grid_view,
+                Colors.purple,
+                onTap: () => setState(() => _selectedMenuIndex = 2),
               ),
             ],
           ),
@@ -301,49 +366,67 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildStatCard(String title, String val, IconData icon, Color color) {
+
+  Widget _buildStatCard(String title, String val, IconData icon, Color color, {String? subtitle, VoidCallback? onTap}) {
     return Card(
       elevation: 2,
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      val,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  val,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-          ],
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parking_provider.dart';
 import '../../models/parking_report.dart';
@@ -16,7 +19,9 @@ class _ReportPageState extends State<ReportPage> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   bool _isUploading = false;
-  String? _simulatedPhotoUrl;
+  Uint8List? _pickedImageBytes;
+  String? _pickedFileName;
+  String? _uploadedPhotoUrl;
 
   @override
   void dispose() {
@@ -24,14 +29,112 @@ class _ReportPageState extends State<ReportPage> {
     super.dispose();
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        setState(() {
+          _pickedImageBytes = bytes;
+          _pickedFileName = file.name;
+          _uploadedPhotoUrl = null; // reset URL lama
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memilih foto: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _showImageSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Pilih Sumber Foto', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.gallery);
+                    },
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('Galeri'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.camera);
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('Kamera'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _uploadToStorage(String userId) async {
+    if (_pickedImageBytes == null) return null;
+    try {
+      final fileName = 'reports/$userId/${DateTime.now().millisecondsSinceEpoch}_${_pickedFileName ?? "bukti.jpg"}';
+      final ref = FirebaseStorage.instance.ref().child(fileName);
+      final uploadTask = ref.putData(
+        _pickedImageBytes!,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Gagal upload foto: $e');
+      return null;
+    }
+  }
+
   void _submitReport(String userId, String userEmail) async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isUploading = true;
-    });
+    setState(() => _isUploading = true);
 
     try {
+      // Upload foto jika ada
+      String? photoUrl;
+      if (_pickedImageBytes != null) {
+        photoUrl = await _uploadToStorage(userId);
+      }
+
       final parkingProvider = Provider.of<ParkingProvider>(context, listen: false);
       final String reportId = 'report_${DateTime.now().millisecondsSinceEpoch}';
       final report = ParkingReport(
@@ -39,18 +142,21 @@ class _ReportPageState extends State<ReportPage> {
         userId: userId,
         userEmail: userEmail,
         deskripsi: _descriptionController.text.trim(),
-        fotoUrl: _simulatedPhotoUrl,
+        fotoUrl: photoUrl,
         status: 'Pending',
         createdAt: DateTime.now(),
       );
 
       await parkingProvider.addReport(report);
-      
+
       _descriptionController.clear();
       setState(() {
-        _simulatedPhotoUrl = null;
+        _pickedImageBytes = null;
+        _pickedFileName = null;
+        _uploadedPhotoUrl = null;
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Laporan berhasil dikirim! Petugas akan segera memeriksa.'),
@@ -58,6 +164,7 @@ class _ReportPageState extends State<ReportPage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal mengirim laporan: $e'),
@@ -65,9 +172,7 @@ class _ReportPageState extends State<ReportPage> {
         ),
       );
     } finally {
-      setState(() {
-        _isUploading = false;
-      });
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
@@ -75,7 +180,7 @@ class _ReportPageState extends State<ReportPage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final parkingProvider = Provider.of<ParkingProvider>(context);
-    
+
     final userId = authProvider.userDetails?['uid'] ?? '';
     final userEmail = authProvider.userDetails?['email'] ?? '';
     final primaryColor = const Color(0xFF1976D2);
@@ -128,62 +233,91 @@ class _ReportPageState extends State<ReportPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Simulated Photo Uploader
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _simulatedPhotoUrl = 'https://picsum.photos/400/300';
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Foto bukti kendaraan ditambahkan (Simulated)')),
-                            );
-                          },
+                        // Real Photo Picker
+                        GestureDetector(
+                          onTap: _showImageSourcePicker,
                           child: Container(
-                            height: 120,
+                            height: 150,
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[300]!),
+                              border: Border.all(
+                                color: _pickedImageBytes != null ? primaryColor : Colors.grey[300]!,
+                                width: _pickedImageBytes != null ? 2 : 1,
+                              ),
                             ),
-                            child: _simulatedPhotoUrl != null
+                            child: _pickedImageBytes != null
                                 ? Stack(
+                                    fit: StackFit.expand,
                                     children: [
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(11),
-                                        child: Image.network(
-                                          _simulatedPhotoUrl!,
-                                          width: double.infinity,
-                                          height: double.infinity,
+                                        child: Image.memory(
+                                          _pickedImageBytes!,
                                           fit: BoxFit.cover,
                                         ),
                                       ),
                                       Positioned(
                                         top: 8,
                                         right: 8,
-                                        child: CircleAvatar(
-                                          backgroundColor: Colors.black54,
-                                          radius: 14,
-                                          child: IconButton(
-                                            icon: const Icon(Icons.close, size: 12, color: Colors.white),
-                                            onPressed: () {
-                                              setState(() {
-                                                _simulatedPhotoUrl = null;
-                                              });
-                                            },
+                                        child: GestureDetector(
+                                          onTap: () => setState(() {
+                                            _pickedImageBytes = null;
+                                            _pickedFileName = null;
+                                          }),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.black54,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.close, size: 16, color: Colors.white),
                                           ),
                                         ),
-                                      )
+                                      ),
+                                      Positioned(
+                                        bottom: 8,
+                                        left: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black54,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.photo, size: 12, color: Colors.white),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                _pickedFileName ?? 'bukti.jpg',
+                                                style: const TextStyle(color: Colors.white, fontSize: 11),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   )
                                 : Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.add_a_photo_outlined, size: 36, color: primaryColor),
-                                      const SizedBox(height: 8),
+                                      Icon(Icons.add_a_photo_outlined, size: 40, color: primaryColor),
+                                      const SizedBox(height: 10),
                                       Text(
                                         'Tambahkan Foto Bukti',
-                                        style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.bold),
-                                      )
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Klik untuk pilih dari Galeri atau Kamera',
+                                        style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                      ),
                                     ],
                                   ),
                           ),
@@ -199,10 +333,17 @@ class _ReportPageState extends State<ReportPage> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           child: _isUploading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text('Mengirim laporan...'),
+                                  ],
                                 )
                               : const Text('KIRIM LAPORAN', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
@@ -219,7 +360,6 @@ class _ReportPageState extends State<ReportPage> {
               ),
               const SizedBox(height: 12),
 
-              // Fetch only user reports
               StreamBuilder<List<ParkingReport>>(
                 stream: parkingProvider.streamReports(),
                 builder: (context, snapshot) {
@@ -305,9 +445,22 @@ class _ReportPageState extends State<ReportPage> {
                                   borderRadius: BorderRadius.circular(8),
                                   child: Image.network(
                                     report.fotoUrl!,
-                                    height: 100,
+                                    height: 120,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
+                                    loadingBuilder: (ctx, child, progress) {
+                                      if (progress == null) return child;
+                                      return const SizedBox(
+                                        height: 120,
+                                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                      );
+                                    },
+                                    errorBuilder: (ctx, err, _) => const SizedBox(
+                                      height: 60,
+                                      child: Center(
+                                        child: Text('Gagal memuat foto', style: TextStyle(color: Colors.grey)),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],

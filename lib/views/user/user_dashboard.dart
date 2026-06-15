@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parking_provider.dart';
 import '../../models/parking_zone.dart';
@@ -28,18 +29,22 @@ class _UserDashboardState extends State<UserDashboard> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final parkingProvider = Provider.of<ParkingProvider>(context, listen: false);
       if (authProvider.userDetails != null) {
-        final parkingProvider = Provider.of<ParkingProvider>(context, listen: false);
         parkingProvider.loadActiveParking(authProvider.userDetails!['uid']).then((_) {
           _startTimerIfParked();
         });
       }
+      // Mulai tracking lokasi realtime
+      parkingProvider.startLocationTracking();
     });
   }
 
   @override
   void dispose() {
     _parkingTimer?.cancel();
+    // Hentikan tracking saat halaman ditutup
+    Provider.of<ParkingProvider>(context, listen: false).stopLocationTracking();
     super.dispose();
   }
 
@@ -66,6 +71,27 @@ class _UserDashboardState extends State<UserDashboard> {
     setState(() {
       _parkingDurationStr = '00:00:00';
     });
+  }
+
+  // Buka Google Maps navigasi ke koordinat tujuan
+  Future<void> _openGoogleMaps(double destLat, double destLng, String label) async {
+    final parking = Provider.of<ParkingProvider>(context, listen: false);
+    final originLat = parking.userLatitude;
+    final originLng = parking.userLongitude;
+
+    // Google Maps web URL — works di semua platform (web, Android, iOS)
+    final webUrl = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&origin=$originLat,$originLng'
+      '&destination=$destLat,$destLng'
+      '&travelmode=driving',
+    );
+
+    try {
+      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Gagal buka Google Maps: $e');
+    }
   }
 
   @override
@@ -228,6 +254,36 @@ class _UserDashboardState extends State<UserDashboard> {
                   },
                 ),
 
+                // Badge koordinat lokasi realtime
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Consumer<ParkingProvider>(
+                    builder: (ctx, parking, _) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.my_location, color: Colors.greenAccent, size: 13),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${parking.userLatitude.toStringAsFixed(5)}, ${parking.userLongitude.toStringAsFixed(5)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
                 // Floating "Cari Parkir Terdekat" FAB
                 if (active == null)
                   Positioned(
@@ -357,16 +413,18 @@ class _UserDashboardState extends State<UserDashboard> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      // Toggle Navigation Mode
+                      // Tombol Panduan Rute → buka Google Maps
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            setState(() {
-                              _isNavigating = !_isNavigating;
-                            });
+                            _openGoogleMaps(
+                              active.latitude,
+                              active.longitude,
+                              active.zoneName,
+                            );
                           },
-                          icon: Icon(_isNavigating ? Icons.navigation : Icons.explore_outlined),
-                          label: Text(_isNavigating ? 'Navigasi Aktif' : 'Panduan Rute'),
+                          icon: const Icon(Icons.directions),
+                          label: const Text('Panduan Rute'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: primaryColor,
                             side: BorderSide(color: primaryColor),
@@ -468,27 +526,21 @@ class _UserDashboardState extends State<UserDashboard> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        // Trigger GPS route navigation
-                        setState(() {
-                          _isNavigating = true;
-                        });
-                        // Automatically subscribe to slots for map selection
+                        // Buka Google Maps navigasi ke zona parkir
+                        _openGoogleMaps(zone.latitude, zone.longitude, zone.nama);
+                        // Juga set in-app navigation mode
+                        setState(() => _isNavigating = true);
                         Provider.of<ParkingProvider>(context, listen: false).subscribeToSlots(zone.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Menampilkan rute ke ${zone.nama}. Klik marker untuk parkir.'),
-                            duration: const Duration(seconds: 4),
-                          ),
-                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text('Pandu Rute'),
+                      icon: const Icon(Icons.directions),
+                      label: const Text('Buka Google Maps'),
                     ),
                   ),
                 ],
@@ -503,10 +555,11 @@ class _UserDashboardState extends State<UserDashboard> {
   // Parking Confirmation Dialog
   void _showParkConfirmationDialog(ParkingZone zone, ParkingSlot slot, String userId) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final rootContext = context; // Simpan context sebelum async
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: Row(
             children: [
@@ -520,13 +573,13 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Batal'),
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.pop(context);
-                final provider = Provider.of<ParkingProvider>(context, listen: false);
+                Navigator.pop(dialogContext);
+                final provider = Provider.of<ParkingProvider>(rootContext, listen: false);
                 final error = await provider.parkVehicle(
                   userId: userId,
                   userEmail: authProvider.userDetails?['email'] ?? '',
@@ -534,15 +587,16 @@ class _UserDashboardState extends State<UserDashboard> {
                   slot: slot,
                 );
 
+                if (!mounted) return;
                 if (error != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(rootContext).showSnackBar(
                     SnackBar(content: Text(error), backgroundColor: Colors.red),
                   );
                 } else {
                   _startTimerIfParked();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(rootContext).showSnackBar(
                     SnackBar(
-                      content: Text('Berhasil memarkirkan kendaraan di Slot ${slot.kode}!'),
+                      content: Text('Berhasil parkir di Slot ${slot.kode}! Riwayat tersimpan.'),
                       backgroundColor: Colors.green,
                     ),
                   );
