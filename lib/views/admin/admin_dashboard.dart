@@ -311,7 +311,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             mainAxisSpacing: 20,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: isMobile ? 3.0 : 2.2,
+            childAspectRatio: isMobile ? 2.4 : 2.2,
             children: [
               _buildStatCard(
                 'TOTAL ZONA PARKIR',
@@ -378,7 +378,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(16.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

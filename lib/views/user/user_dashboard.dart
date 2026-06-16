@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parking_provider.dart';
 import '../../models/parking_zone.dart';
@@ -73,25 +72,75 @@ class _UserDashboardState extends State<UserDashboard> {
     });
   }
 
-  // Buka Google Maps navigasi ke koordinat tujuan
-  Future<void> _openGoogleMaps(double destLat, double destLng, String label) async {
-    final parking = Provider.of<ParkingProvider>(context, listen: false);
-    final originLat = parking.userLatitude;
-    final originLng = parking.userLongitude;
-
-    // Google Maps web URL — works di semua platform (web, Android, iOS)
-    final webUrl = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&origin=$originLat,$originLng'
-      '&destination=$destLat,$destLng'
-      '&travelmode=driving',
+  // Tampilkan dialog info koordinat zona parkir
+  void _showLocationInfo(double lat, double lng, String label) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.location_on, color: Color(0xFF1976D2)),
+            const SizedBox(width: 8),
+            const Flexible(child: Text('Lokasi Parkir')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.my_location, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  'Lat: ${lat.toStringAsFixed(6)}',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.my_location, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  'Lng: ${lng.toStringAsFixed(6)}',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: Color(0xFF1976D2)),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Rute ditampilkan di peta dalam aplikasi.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF0D47A1)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
     );
-
-    try {
-      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      debugPrint('Gagal buka Google Maps: $e');
-    }
   }
 
   @override
@@ -413,18 +462,18 @@ class _UserDashboardState extends State<UserDashboard> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      // Tombol Panduan Rute → buka Google Maps
+                      // Tombol info lokasi parkir
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            _openGoogleMaps(
+                            _showLocationInfo(
                               active.latitude,
                               active.longitude,
                               active.zoneName,
                             );
                           },
-                          icon: const Icon(Icons.directions),
-                          label: const Text('Panduan Rute'),
+                          icon: const Icon(Icons.location_on),
+                          label: const Text('Lihat Lokasi'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: primaryColor,
                             side: BorderSide(color: primaryColor),
@@ -529,9 +578,7 @@ class _UserDashboardState extends State<UserDashboard> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        // Buka Google Maps navigasi ke zona parkir
-                        _openGoogleMaps(zone.latitude, zone.longitude, zone.nama);
-                        // Juga set in-app navigation mode
+                        // Aktifkan navigasi in-app di peta
                         setState(() => _isNavigating = true);
                         Provider.of<ParkingProvider>(context, listen: false).subscribeToSlots(zone.id);
                       },
@@ -539,8 +586,8 @@ class _UserDashboardState extends State<UserDashboard> {
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
                       ),
-                      icon: const Icon(Icons.directions),
-                      label: const Text('Buka Google Maps'),
+                      icon: const Icon(Icons.near_me),
+                      label: const Text('Navigasi di Peta'),
                     ),
                   ),
                 ],
